@@ -12,7 +12,12 @@ export async function GET(req: Request) {
   const firstHopIds = Array.from(new Set(firstHopEdges.map(e => e.sourceId === centerNode.id ? e.targetId : e.sourceId)))
   const firstHopNodes = await prisma.node.findMany({ where: { id: { in: firstHopIds } } })
 
-  const secondHopEdges = await prisma.edge.findMany({ where: { OR: firstHopIds.map(id => ({ sourceId: id })).concat(firstHopIds.map(id => ({ targetId: id }))) } })
+  const orConditions: any[] = []
+  for (const id of firstHopIds) {
+    orConditions.push({ sourceId: id })
+    orConditions.push({ targetId: id })
+  }
+  const secondHopEdges = await prisma.edge.findMany({ where: { OR: orConditions } })
   const secondHopIds = Array.from(new Set(secondHopEdges.flatMap(e => [e.sourceId, e.targetId])))
   const secondHopNodes = await prisma.node.findMany({ where: { id: { in: secondHopIds } } })
 
