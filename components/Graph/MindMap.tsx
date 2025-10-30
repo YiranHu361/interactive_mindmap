@@ -60,6 +60,28 @@ export default function MindMap() {
         graphData={graphData}
         onNodeClick={onNodeClick as any}
         nodeLabel={(n: any) => n.label}
+        nodeCanvasObject={(node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
+          const label = node.label
+          const fontSize = Math.max(10, 12 / globalScale)
+          ctx.font = `${fontSize}px sans-serif`
+          const textWidth = ctx.measureText(label).width
+          const bckgDimensions = [textWidth + 8, fontSize + 6]
+          ctx.fillStyle = node.type === 'career' ? 'rgba(59,130,246,0.9)' : 'rgba(16,185,129,0.9)'
+          ctx.beginPath()
+          ctx.roundRect(node.x - bckgDimensions[0] / 2, node.y - bckgDimensions[1] / 2, bckgDimensions[0], bckgDimensions[1], 6)
+          ctx.fill()
+          ctx.textAlign = 'center'
+          ctx.textBaseline = 'middle'
+          ctx.fillStyle = 'white'
+          ctx.fillText(label, node.x, node.y)
+        }}
+        nodePointerAreaPaint={(node: any, color: string, ctx: CanvasRenderingContext2D) => {
+          const label = node.label
+          ctx.fillStyle = color
+          const width = ctx.measureText(label).width + 8
+          const height = 18
+          ctx.fillRect(node.x - width / 2, node.y - height / 2, width, height)
+        }}
         nodeAutoColorBy={(n: any) => n.type}
         linkColor={() => 'rgba(100,100,100,0.3)'}
         linkDirectionalParticles={2}
