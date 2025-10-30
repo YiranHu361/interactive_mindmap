@@ -7,7 +7,7 @@ const ForceGraph2D = dynamic(() => import('react-force-graph').then(m => m.Force
 
 type GraphNode = { id: string; label: string; type: 'career' | 'skill' }
 type GraphLink = { source: string; target: string; weight?: number }
-type GraphData = { nodes: GraphNode[]; links: GraphLink[]; centerId: string }
+type GraphData = { nodes: GraphNode[]; links: GraphLink[]; centerId: string; selected?: any }
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
