@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
 import useSWR from 'swr'
 
-const ForceGraph2D = dynamic(() => import('react-force-graph').then(m => m.ForceGraph2D), { ssr: false })
+// Import 2D build directly to avoid optional VR/AFRAME side-effects on the client
+const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false })
 
 type GraphNode = { id: string; label: string; type: 'career' | 'skill' }
 type GraphLink = { source: string; target: string; weight?: number }
