@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
-import getServerSession from 'next-auth'
 import { authConfig } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import OpenAI from 'openai'
 
 export async function POST(req: Request) {
   const { content } = await req.json()
-  const session = await getServerSession(authConfig as any)
+  const nextAuth: any = await import('next-auth')
+  const session = await nextAuth.getServerSession(authConfig as any)
 
   let text = ''
   if (process.env.OPENAI_API_KEY) {
