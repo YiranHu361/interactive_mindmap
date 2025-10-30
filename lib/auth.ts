@@ -12,10 +12,12 @@ export const authConfig: NextAuthConfig = {
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        if (!credentials?.username || !credentials?.password) return null
-        const user = await prisma.user.findUnique({ where: { username: credentials.username } })
+        const username = (credentials as any)?.username as string | undefined
+        const password = (credentials as any)?.password as string | undefined
+        if (!username || !password) return null
+        const user = await prisma.user.findUnique({ where: { username } })
         if (!user) return null
-        const ok = await bcrypt.compare(credentials.password, user.hashedPassword)
+        const ok = await bcrypt.compare(password, user.hashedPassword)
         if (!ok) return null
         return { id: user.id, name: user.username }
       },
