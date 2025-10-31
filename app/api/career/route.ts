@@ -5,14 +5,15 @@ import { auth } from '@/lib/auth'
 import { stripMarkdown } from '@/lib/markdown'
 
 export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const careerName = searchParams.get('career')
+  const regenerate = searchParams.get('regenerate') === 'true'
+  
+  if (!careerName) {
+    return NextResponse.json({ error: 'Career name is required' }, { status: 400 })
+  }
+
   try {
-    const { searchParams } = new URL(req.url)
-    const careerName = searchParams.get('career')
-    const regenerate = searchParams.get('regenerate') === 'true'
-    
-    if (!careerName) {
-      return NextResponse.json({ error: 'Career name is required' }, { status: 400 })
-    }
 
     // Check cache and get session in parallel
     const [careerNodeResult, session] = await Promise.all([
