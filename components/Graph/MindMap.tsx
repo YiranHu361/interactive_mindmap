@@ -122,10 +122,7 @@ export default function MindMap() {
         graphData={graphData}
         onNodeClick={onNodeClick as any}
         nodeLabel={(n: any) => n.label}
-        // Fixed edge length of 200px
-        linkDistance={200}
-        linkStrength={0.05}
-        // Adjust forces for better spacing
+        // Use d3Force to customize physics
         d3AlphaDecay={0.02}
         d3VelocityDecay={0.3}
         // Center force to keep graph centered
