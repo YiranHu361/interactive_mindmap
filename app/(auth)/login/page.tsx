@@ -1,16 +1,33 @@
 "use client"
 import { useState } from 'react'
 import { signIn } from 'next-auth/react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') || '/'
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    const res = await signIn('credentials', { username, password, redirect: true, callbackUrl: '/' })
-    if ((res as any)?.error) setError((res as any).error)
+    setError('')
+    
+    const res = await signIn('credentials', { 
+      username, 
+      password, 
+      redirect: false 
+    })
+    
+    if ((res as any)?.error) {
+      setError((res as any).error)
+    } else if (res?.ok) {
+      // Redirect manually after successful login
+      router.push(callbackUrl)
+      router.refresh()
+    }
   }
 
   return (

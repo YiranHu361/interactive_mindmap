@@ -8,22 +8,30 @@ const careers = [
   'Mechanical Engineer','Bioinformatics Scientist','Policy Analyst','Teacher','Entrepreneur'
 ]
 
-const skillMap: Record<string, string[]> = {
-  'Software Engineer': ['Algorithms','Data Structures','JavaScript','TypeScript','Git','Testing','System Design','Databases'],
-  'Data Scientist': ['Python','Statistics','Machine Learning','SQL','Data Visualization','Pandas','Experiment Design'],
-  'Product Manager': ['Roadmapping','User Research','Prioritization','Communication','Analytics','A/B Testing'],
-  'UX Designer': ['Figma','User Interviews','Wireframing','Prototyping','Accessibility','Design Systems'],
-  'Investment Analyst': ['Financial Modeling','Excel','Valuation','Accounting','Market Research','Presentation'],
-  'Marketing Manager': ['SEO','Content Strategy','Analytics','Copywriting','Campaigns','Social Media'],
-  'Sales Engineer': ['Pre-Sales','Demos','Solutions','Communication','APIs','CRM'],
-  'Cybersecurity Analyst': ['Threat Modeling','Network Security','SIEM','Incident Response','Scripting','Risk'],
-  'DevOps Engineer': ['Linux','CI/CD','Containers','Kubernetes','Cloud','Monitoring'],
-  'Quant Researcher': ['Probability','Stochastic Calculus','Python','C++','Backtesting','Time Series'],
-  'Mechanical Engineer': ['CAD','Statics','Dynamics','Manufacturing','Materials','MATLAB'],
-  'Bioinformatics Scientist': ['Biology','Genomics','R','Python','Statistics','Pipelines'],
-  'Policy Analyst': ['Policy Writing','Economics','Statistics','Research','Stakeholder Analysis'],
-  'Teacher': ['Classroom Management','Curriculum','Assessment','Communication','Subject Mastery'],
-  'Entrepreneur': ['Fundraising','MVP','Go-To-Market','Pitching','Hiring','Finance']
+// Define skills that connect to multiple careers (many-to-many)
+const skillToCareers: Record<string, string[]> = {
+  'Python': ['Software Engineer', 'Data Scientist', 'DevOps Engineer', 'Quant Researcher', 'Bioinformatics Scientist'],
+  'JavaScript': ['Software Engineer', 'UX Designer', 'Product Manager'],
+  'SQL': ['Data Scientist', 'Investment Analyst', 'Product Manager'],
+  'Communication': ['Marketing Manager', 'Sales Engineer', 'Teacher', 'Product Manager'],
+  'Project Management': ['Product Manager', 'Entrepreneur', 'DevOps Engineer'],
+  'Data Analysis': ['Data Scientist', 'Investment Analyst', 'Policy Analyst'],
+  'Machine Learning': ['Data Scientist', 'Bioinformatics Scientist', 'Quant Researcher'],
+  'UI/UX Design': ['UX Designer', 'Product Manager', 'Software Engineer'],
+  'Statistics': ['Data Scientist', 'Investment Analyst', 'Policy Analyst', 'Bioinformatics Scientist'],
+  'Analytics': ['Data Scientist', 'Product Manager', 'Marketing Manager'],
+  'Testing': ['Software Engineer', 'Product Manager'],
+  'System Design': ['Software Engineer', 'DevOps Engineer'],
+  'Git': ['Software Engineer', 'DevOps Engineer'],
+  'TypeScript': ['Software Engineer', 'UX Designer'],
+  'Cloud': ['DevOps Engineer', 'Software Engineer', 'Data Scientist'],
+  'Linux': ['DevOps Engineer', 'Software Engineer', 'Cybersecurity Analyst'],
+  'CI/CD': ['DevOps Engineer', 'Software Engineer'],
+  'Excel': ['Investment Analyst', 'Data Scientist', 'Product Manager'],
+  'Presentation': ['Investment Analyst', 'Product Manager', 'Marketing Manager', 'Sales Engineer'],
+  'Research': ['Data Scientist', 'Policy Analyst', 'Bioinformatics Scientist'],
+  'Economics': ['Investment Analyst', 'Policy Analyst'],
+  'Finance': ['Investment Analyst', 'Entrepreneur'],
 }
 
 const pathways: Record<string, string[]> = {
@@ -50,6 +58,7 @@ async function main() {
     create: { id: 'career', type: 'career', label: 'career', summary: 'Explore careers at the center of the map.' },
   })
 
+  // Create all career nodes
   for (const career of careers) {
     await prisma.node.upsert({
       where: { id: career },
@@ -63,23 +72,33 @@ async function main() {
       },
     })
 
+    // Connect careers to center
     await prisma.edge.upsert({
       where: { id: `${'career'}_${career}` },
       update: {},
       create: { id: `${'career'}_${career}`, sourceId: 'career', targetId: career, weight: 1 },
     })
+  }
 
-    for (const skill of skillMap[career] || []) {
+  // Create skills and connect them to multiple careers (many-to-many)
+  for (const [skill, careerList] of Object.entries(skillToCareers)) {
+    // Create skill node (use skill name as ID, not prefixed with career)
       await prisma.node.upsert({
-        where: { id: `${career}_${skill}` },
+      where: { id: skill },
         update: {},
-        create: { id: `${career}_${skill}`, type: 'skill', label: skill },
+      create: { id: skill, type: 'skill', label: skill },
       })
+
+    // Create edges connecting this skill to all its careers
+    for (const career of careerList) {
+      // Only create edge if career exists
+      if (careers.includes(career)) {
       await prisma.edge.upsert({
-        where: { id: `${career}_${skill}_edge` },
+          where: { id: `${skill}_${career}` },
         update: {},
-        create: { id: `${career}_${skill}_edge`, sourceId: career, targetId: `${career}_${skill}`, weight: 1 },
+          create: { id: `${skill}_${career}`, sourceId: skill, targetId: career, weight: 1 },
       })
+      }
     }
   }
 }

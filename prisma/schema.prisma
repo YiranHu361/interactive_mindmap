@@ -7,62 +7,91 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             String   @id @default(cuid())
-  username       String   @unique
-  hashedPassword String
-  university     String
-  createdAt      DateTime @default(now())
-  messages       ChatMessage[]
-  memories       UserMemory[]
-  views          NodeViewHistory[]
-}
-
-model Node {
-  id       String   @id
-  type     String
-  label    String
-  summary  String?
-  metadata Json?
-  sources  Edge[]   @relation("source")
-  targets  Edge[]   @relation("target")
-  views    NodeViewHistory[]
-}
-
-model Edge {
-  id       String  @id @default(cuid())
-  source   Node    @relation("source", fields: [sourceId], references: [id])
-  sourceId String
-  target   Node    @relation("target", fields: [targetId], references: [id])
-  targetId String
-  weight   Float?
-}
-
 model ChatMessage {
   id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
   role      String
   content   String
   createdAt DateTime @default(now())
+  User      User     @relation(fields: [userId], references: [id])
 }
 
-model UserMemory {
-  id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String
-  key       String
-  value     Json
-  updatedAt DateTime @updatedAt
+model Edge {
+  id                       String @id @default(cuid())
+  sourceId                 String
+  targetId                 String
+  weight                   Float?
+  Node_Edge_sourceIdToNode Node   @relation("Edge_sourceIdToNode", fields: [sourceId], references: [id])
+  Node_Edge_targetIdToNode Node   @relation("Edge_targetIdToNode", fields: [targetId], references: [id])
+}
+
+model Node {
+  id                       String            @id
+  type                     String
+  label                    String
+  summary                  String?
+  metadata                 Json?
+  Edge_Edge_sourceIdToNode Edge[]            @relation("Edge_sourceIdToNode")
+  Edge_Edge_targetIdToNode Edge[]            @relation("Edge_targetIdToNode")
+  NodeViewHistory          NodeViewHistory[]
+  UserNodeCache            UserNodeCache[]
 }
 
 model NodeViewHistory {
   id        String   @id @default(cuid())
-  user      User     @relation(fields: [userId], references: [id])
   userId    String
-  node      Node     @relation(fields: [nodeId], references: [id])
   nodeId    String
   createdAt DateTime @default(now())
+  Node      Node     @relation(fields: [nodeId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
 }
 
+model User {
+  id              String            @id @default(cuid())
+  username        String            @unique
+  hashedPassword  String
+  university      String
+  createdAt       DateTime          @default(now())
+  ChatMessage     ChatMessage[]
+  NodeViewHistory NodeViewHistory[]
+  UserMemory      UserMemory[]
+  UserNodeCache   UserNodeCache[]
+}
 
+model UserMemory {
+  id        String   @id @default(cuid())
+  userId    String
+  key       String
+  value     Json
+  updatedAt DateTime @updatedAt
+  User      User     @relation(fields: [userId], references: [id])
+}
+
+model UserNodeCache {
+  id        String   @id @default(cuid())
+  userId    String
+  nodeId    String
+  cacheType String
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Node      Node     @relation(fields: [nodeId], references: [id])
+  User      User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, nodeId, cacheType])
+  @@index([userId, nodeId])
+}
+
+model berkeley_courses {
+  subject            String
+  course_number      String
+  course_description String?
+
+  @@id([subject, course_number])
+}
+
+model berkeley_organizations {
+  name        String  @id
+  description String?
+  url         String?
+}
