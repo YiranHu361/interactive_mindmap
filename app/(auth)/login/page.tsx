@@ -1,9 +1,9 @@
 "use client"
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
-export default function LoginPage() {
+function LoginForm() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -40,6 +40,14 @@ export default function LoginPage() {
         <button className="w-full h-10 bg-blue-600 text-white rounded" type="submit">Login</button>
       </form>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="max-w-md mx-auto py-16"><p>Loading...</p></div>}>
+      <LoginForm />
+    </Suspense>
   )
 }
 
