@@ -70,7 +70,7 @@ export const authConfig: NextAuthConfig = {
   },
 }
 
-// Export the auth function for use in API routes
-export const { auth } = NextAuth(authConfig)
+// Export NextAuth instance
+export const { auth, handlers, signIn, signOut } = NextAuth(authConfig)
 
 

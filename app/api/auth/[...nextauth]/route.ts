@@ -1,7 +1,4 @@
-import NextAuth from 'next-auth'
-import { authConfig } from '@/lib/auth'
-
-const { handlers } = NextAuth(authConfig)
+import { handlers } from '@/lib/auth'
 
 export const GET = handlers.GET
 export const POST = handlers.POST
