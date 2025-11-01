@@ -3,10 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
 import OpenAI from 'openai'
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ''
-})
-
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
@@ -60,6 +56,16 @@ export async function GET(req: Request) {
       console.log(`[Skill API] 🔍 Using RAG semantic search for: ${skillName}`)
       
       try {
+        // Initialize OpenAI client
+        if (!process.env.OPENAI_API_KEY) {
+          console.error('[Skill API] OPENAI_API_KEY not configured')
+          throw new Error('OpenAI API key not configured')
+        }
+        
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY
+        })
+        
         // STEP 1: Generate embedding for the skill query
         const embeddingResponse = await openai.embeddings.create({
           model: 'text-embedding-3-small',
