@@ -67,7 +67,7 @@ export async function GET(req: Request) {
         })
         
         // STEP 1: Generate embedding for the skill query
-        const embeddingResponse = await openai.embeddings.create({
+        const embeddingResponse = await (openai as any).embeddings.create({
           model: 'text-embedding-3-small',
           input: skillName,
           dimensions: 1536

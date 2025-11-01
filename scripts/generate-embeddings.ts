@@ -12,7 +12,7 @@ import OpenAI from 'openai'
 
 const prisma = new PrismaClient()
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY || ''
 })
 
 async function generateEmbeddings() {
@@ -70,7 +70,7 @@ async function generateEmbeddings() {
           }
 
           // Generate embedding
-          const response = await openai.embeddings.create({
+          const response = await (openai as any).embeddings.create({
             model: 'text-embedding-3-small',
             input: courseText,
             dimensions: 1536 // Standard dimension for compatibility
