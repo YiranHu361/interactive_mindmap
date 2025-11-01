@@ -312,6 +312,17 @@ export default function Insights() {
     }
   }, [selected, restoring])
 
+  // Cooldown timer effect
+  useEffect(() => {
+    if (cooldownRemaining > 0) {
+      const timer = setTimeout(() => {
+        setCooldownRemaining(cooldownRemaining - 1)
+      }, 1000)
+      cooldownTimerRef.current = timer
+      return () => clearTimeout(timer)
+    }
+  }, [cooldownRemaining])
+
   const handleRegenerate = async () => {
     const now = Date.now()
     const timeSinceLastRegenerate = now - lastRegenerateRef.current
