@@ -102,31 +102,31 @@ export async function GET(req: Request) {
           console.log(`  ${i + 1}. ${c.subject} ${c.course_number} (similarity: ${(c.similarity * 100).toFixed(1)}%)`)
         })
 
-        // STEP 3: Keyword search for organizations (simpler, fewer items)
-        const orgs = await prisma.berkeley_organizations.findMany({
-          where: {
-            OR: [
-              {
-                name: {
-                  contains: skillName,
-                  mode: 'insensitive'
-                }
-              },
-              {
-                description: {
-                  contains: skillName,
-                  mode: 'insensitive'
-                }
-              }
-            ]
-          },
-          take: 6
-        }).catch(err => {
-          console.error('[Skill API] Error querying Berkeley organizations:', err.message)
+        // STEP 3: Semantic search for organizations using same embedding
+        const orgs = await prisma.$queryRaw<Array<{
+          name: string
+          description: string | null
+          url: string | null
+          similarity: number
+        }>>`
+          SELECT 
+            name, 
+            description, 
+            url,
+            1 - (embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
+          FROM berkeley_organizations
+          WHERE embedding IS NOT NULL
+          ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}::vector
+          LIMIT 6
+        `.catch(err => {
+          console.error('[Skill API] Error in RAG organization search:', err.message)
           return []
         })
 
-        console.log(`[Skill API] 🎯 Found ${orgs.length} matching Berkeley organizations`)
+        console.log(`[Skill API] 🎯 Found ${orgs.length} semantically similar organizations`)
+        orgs.forEach((o, i) => {
+          console.log(`  ${i + 1}. ${o.name.substring(0, 50)} (similarity: ${(o.similarity * 100).toFixed(1)}%)`)
+        })
 
         // Format results
         courses.forEach(course => {
