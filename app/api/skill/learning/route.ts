@@ -128,10 +128,14 @@ export async function GET(req: Request) {
           console.log(`  ${i + 1}. ${o.name.substring(0, 50)} (similarity: ${(o.similarity * 100).toFixed(1)}%)`)
         })
 
-        // Format results - just course title without URL
+        // Format results with short description
         courses.forEach(course => {
+          const shortDesc = course.course_description 
+            ? course.course_description.substring(0, 60) + (course.course_description.length > 60 ? '...' : '')
+            : ''
+          
           classes.push({
-            title: `${course.subject} ${course.course_number}`,
+            title: `${course.subject} ${course.course_number}${shortDesc ? ': ' + shortDesc : ''}`,
             url: undefined
           })
         })

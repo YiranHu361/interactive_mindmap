@@ -110,8 +110,8 @@ export async function POST(req: Request) {
         
         // Build context-aware prompt with university information
         const systemPrompt = university
-          ? `You are a concise college career coach helping a student at ${university}. Use web search to provide current, accurate information about careers, internships, and opportunities specific to ${university} when relevant. Give concrete next steps with sources when possible.`
-          : 'You are a concise college career coach. Use web search to provide current, accurate information about careers, internships, and opportunities. Give concrete next steps with sources when possible.'
+          ? `You are a concise college career coach helping a student at ${university}. Use web search to provide current, accurate information about careers, internships, and opportunities specific to ${university} when relevant. Give concrete next steps with sources when possible. IMPORTANT: Output ONLY plain text. NO markdown formatting, NO bold text (**), NO bullet points with -, NO numbered lists. Write in simple paragraphs with line breaks.`
+          : 'You are a concise college career coach. Use web search to provide current, accurate information about careers, internships, and opportunities. Give concrete next steps with sources when possible. IMPORTANT: Output ONLY plain text. NO markdown formatting, NO bold text (**), NO bullet points with -, NO numbered lists. Write in simple paragraphs with line breaks.'
         
         const resp = await perplexity.chat.completions.create({
           model: 'sonar', // Use 'sonar' instead of 'sonar-mini'
