@@ -86,6 +86,7 @@ model berkeley_courses {
   subject            String
   course_number      String
   course_description String?
+  embedding          Unsupported("vector(1536)")?
 
   @@id([subject, course_number])
 }

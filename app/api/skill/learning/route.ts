@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import OpenAI from 'openai'
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
+})
 
 export async function GET(req: Request) {
   try {
@@ -45,83 +50,97 @@ export async function GET(req: Request) {
       }
     }
 
-    // ALGORITHM: Query database for matching courses and clubs
+    // ALGORITHM: Use RAG (Retrieval-Augmented Generation) for semantic search
     const classes: Array<{ title: string; url?: string }> = []
     const clubs: Array<{ title: string; url?: string }> = []
 
     console.log(`[Skill API] University check: "${university}", includes berkeley: ${university?.toLowerCase().includes('berkeley')}`)
     
     if (university && university.toLowerCase().includes('berkeley')) {
-      console.log(`[Skill API] Querying Berkeley database for: ${skillName}`)
-      // Normalize skill name for matching
-      const skillLower = skillName.toLowerCase()
+      console.log(`[Skill API] 🔍 Using RAG semantic search for: ${skillName}`)
       
-      // Query Berkeley courses with text matching in subject or description
-      const courses = await prisma.berkeley_courses.findMany({
-        where: {
-          OR: [
-            {
-              subject: {
-                contains: skillName,
-                mode: 'insensitive'
-              }
-            },
-            {
-              course_description: {
-                contains: skillName,
-                mode: 'insensitive'
-              }
-            }
-          ]
-        },
-        take: 6
-      }).catch(err => {
-        console.error('[Skill API] Error querying Berkeley courses:', err.message)
-        return []
-      })
-
-      console.log(`[Skill API] Found ${courses.length} matching Berkeley courses for "${skillName}"`)
-
-      // Query Berkeley organizations with text matching in name or description
-      const orgs = await prisma.berkeley_organizations.findMany({
-        where: {
-          OR: [
-            {
-              name: {
-                contains: skillName,
-                mode: 'insensitive'
-              }
-            },
-            {
-              description: {
-                contains: skillName,
-                mode: 'insensitive'
-              }
-            }
-          ]
-        },
-        take: 6
-      }).catch(err => {
-        console.error('[Skill API] Error querying Berkeley organizations:', err.message)
-        return []
-      })
-
-      console.log(`[Skill API] Found ${orgs.length} matching Berkeley organizations for "${skillName}"`)
-
-      // Format results
-      courses.forEach(course => {
-        classes.push({
-          title: `${course.subject} ${course.course_number}${course.course_description ? ': ' + course.course_description.substring(0, 60) + (course.course_description.length > 60 ? '...' : '') : ''}`,
-          url: undefined // No URL in schema
+      try {
+        // STEP 1: Generate embedding for the skill query
+        const embeddingResponse = await openai.embeddings.create({
+          model: 'text-embedding-3-small',
+          input: skillName,
+          dimensions: 1536
         })
-      })
+        
+        const queryEmbedding = embeddingResponse.data[0].embedding
+        console.log(`[Skill API] ✅ Generated query embedding (${queryEmbedding.length} dimensions)`)
 
-      orgs.forEach(org => {
-        clubs.push({
-          title: org.name,
-          url: org.url || undefined
+        // STEP 2: Semantic search for courses using cosine similarity
+        const courses = await prisma.$queryRaw<Array<{
+          subject: string
+          course_number: string
+          course_description: string | null
+          similarity: number
+        }>>`
+          SELECT 
+            subject, 
+            course_number, 
+            course_description,
+            1 - (embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
+          FROM berkeley_courses
+          WHERE embedding IS NOT NULL
+          ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}::vector
+          LIMIT 8
+        `.catch(err => {
+          console.error('[Skill API] Error in RAG course search:', err.message)
+          return []
         })
-      })
+
+        console.log(`[Skill API] 📚 Found ${courses.length} semantically similar courses`)
+        courses.forEach((c, i) => {
+          console.log(`  ${i + 1}. ${c.subject} ${c.course_number} (similarity: ${(c.similarity * 100).toFixed(1)}%)`)
+        })
+
+        // STEP 3: Keyword search for organizations (simpler, fewer items)
+        const orgs = await prisma.berkeley_organizations.findMany({
+          where: {
+            OR: [
+              {
+                name: {
+                  contains: skillName,
+                  mode: 'insensitive'
+                }
+              },
+              {
+                description: {
+                  contains: skillName,
+                  mode: 'insensitive'
+                }
+              }
+            ]
+          },
+          take: 6
+        }).catch(err => {
+          console.error('[Skill API] Error querying Berkeley organizations:', err.message)
+          return []
+        })
+
+        console.log(`[Skill API] 🎯 Found ${orgs.length} matching Berkeley organizations`)
+
+        // Format results
+        courses.forEach(course => {
+          classes.push({
+            title: `${course.subject} ${course.course_number}${course.course_description ? ': ' + course.course_description.substring(0, 60) + (course.course_description.length > 60 ? '...' : '') : ''}`,
+            url: undefined // No URL in schema
+          })
+        })
+
+        orgs.forEach(org => {
+          clubs.push({
+            title: org.name,
+            url: org.url || undefined
+          })
+        })
+
+      } catch (error: any) {
+        console.error('[Skill API] RAG error:', error.message)
+        // Fall back to generic message on error
+      }
     }
 
     // If we don't have enough results, add generic fallback message
