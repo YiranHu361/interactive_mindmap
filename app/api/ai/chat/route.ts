@@ -30,6 +30,75 @@ export async function POST(req: Request) {
     }
 
   let text = ''
+    let recommendations: { courses: Array<{ title: string; url: string }>; clubs: Array<{ title: string; url: string }> } | null = null
+    
+    // RAG: Find relevant courses and clubs if user is at Berkeley
+    if (university && university.toLowerCase().includes('berkeley') && process.env.OPENAI_API_KEY) {
+      try {
+        const openai = new OpenAI({
+          apiKey: process.env.OPENAI_API_KEY
+        })
+        
+        // Generate embedding for user's message
+        const embeddingResponse = await (openai as any).embeddings.create({
+          model: 'text-embedding-3-small',
+          input: content,
+          dimensions: 1536
+        })
+        
+        const queryEmbedding = embeddingResponse.data[0].embedding
+        
+        // Search for relevant courses
+        const courses = await prisma.$queryRaw<Array<{
+          subject: string
+          course_number: string
+          course_description: string | null
+          similarity: number
+        }>>`
+          SELECT 
+            subject, 
+            course_number, 
+            course_description,
+            1 - (embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
+          FROM berkeley_courses
+          WHERE embedding IS NOT NULL
+          ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}::vector
+          LIMIT 3
+        `.catch(() => [])
+        
+        // Search for relevant organizations
+        const orgs = await prisma.$queryRaw<Array<{
+          name: string
+          url: string | null
+          similarity: number
+        }>>`
+          SELECT 
+            name, 
+            url,
+            1 - (embedding <=> ${JSON.stringify(queryEmbedding)}::vector) as similarity
+          FROM berkeley_organizations
+          WHERE embedding IS NOT NULL
+          ORDER BY embedding <=> ${JSON.stringify(queryEmbedding)}::vector
+          LIMIT 3
+        `.catch(() => [])
+        
+        // Format recommendations
+        if (courses.length > 0 || orgs.length > 0) {
+          recommendations = {
+            courses: courses.map(c => ({
+              title: `${c.subject} ${c.course_number}`,
+              url: `https://classes.berkeley.edu/search/class/${c.subject.toLowerCase()}%20${c.course_number}`
+            })),
+            clubs: orgs.map(o => ({
+              title: o.name.substring(0, 80),
+              url: o.url || ''
+            })).filter(c => c.url)
+          }
+        }
+      } catch (error: any) {
+        console.error('[Chat API] RAG error:', error.message)
+      }
+    }
     
     // Use Perplexity API for web browsing
     if (process.env.PERPLEXITY_API_KEY) {
@@ -76,7 +145,7 @@ export async function POST(req: Request) {
       }
   }
 
-  return NextResponse.json({ text })
+  return NextResponse.json({ text, recommendations })
   } catch (error: any) {
     console.error('Chat API error:', error)
     return NextResponse.json(

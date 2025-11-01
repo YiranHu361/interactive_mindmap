@@ -1,7 +1,15 @@
 "use client"
 import { useEffect, useRef, useState } from 'react'
 
-type Msg = { id: string; role: 'user'|'assistant'; content: string }
+type Msg = { 
+  id: string; 
+  role: 'user'|'assistant'; 
+  content: string;
+  recommendations?: {
+    courses: Array<{ title: string; url: string }>;
+    clubs: Array<{ title: string; url: string }>;
+  }
+}
 
 export default function Chat() {
   const [messages, setMessages] = useState<Msg[]>([])
@@ -58,7 +66,12 @@ export default function Chat() {
         throw new Error('No response text received')
       }
 
-      setMessages(m => [...m, { id: crypto.randomUUID(), role: 'assistant', content: data.text }])
+      setMessages(m => [...m, { 
+        id: crypto.randomUUID(), 
+        role: 'assistant', 
+        content: data.text,
+        recommendations: data.recommendations 
+      }])
     } catch (error: any) {
       console.error('Chat error:', error)
       setError(error.message || 'Failed to send message')
@@ -138,19 +151,67 @@ export default function Chat() {
             </div>
           ) : (
             messages.map(m => (
-              <div
-                key={m.id}
-                className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[80%] rounded-lg px-4 py-2 ${
-                    m.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-gray-800 border border-gray-200'
-                  }`}
-                >
-                  <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+              <div key={m.id}>
+                <div className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div
+                    className={`max-w-[80%] rounded-lg px-4 py-2 ${
+                      m.role === 'user'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-800 border border-gray-200'
+                    }`}
+                  >
+                    <div className="text-sm whitespace-pre-wrap break-words">{m.content}</div>
+                  </div>
                 </div>
+                
+                {/* Recommendations */}
+                {m.role === 'assistant' && m.recommendations && (m.recommendations.courses.length > 0 || m.recommendations.clubs.length > 0) && (
+                  <div className="mt-2 ml-0 max-w-[80%]">
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm">
+                      <div className="font-semibold text-green-900 mb-2">📚 Recommended Resources</div>
+                      
+                      {m.recommendations.courses.length > 0 && (
+                        <div className="mb-2">
+                          <div className="text-xs font-medium text-green-800 mb-1">Courses:</div>
+                          <ul className="space-y-1">
+                            {m.recommendations.courses.map((course, i) => (
+                              <li key={i}>
+                                <a 
+                                  href={course.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline text-xs"
+                                >
+                                  {course.title}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      
+                      {m.recommendations.clubs.length > 0 && (
+                        <div>
+                          <div className="text-xs font-medium text-green-800 mb-1">Clubs:</div>
+                          <ul className="space-y-1">
+                            {m.recommendations.clubs.map((club, i) => (
+                              <li key={i}>
+                                <a 
+                                  href={club.url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:underline text-xs"
+                                >
+                                  {club.title}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             ))
           )}
